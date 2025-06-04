@@ -1,0 +1,7 @@
+com/example/dummydata/controller/DummyDataController.class
+com/example/dummydata/model/User.class
+com/example/dummydata/DummyDataApplication.class
+com/example/dummydata/config/CorsConfig$1.class
+com/example/dummydata/service/DummyDataService.class
+com/example/dummydata/repository/UserRepository.class
+com/example/dummydata/config/CorsConfig.class
