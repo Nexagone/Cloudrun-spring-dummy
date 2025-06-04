@@ -35,7 +35,7 @@ jobs:
 
           # Fallback si le nom du repo est vide
           if [ -z "${REPO_NAME_LOWER}" ]; then
-            REPO_NAME_LOWER="botsc_ai"
+            REPO_NAME_LOWER="dummy-data-api"
           fi
 
           # Base pour tous les tags
