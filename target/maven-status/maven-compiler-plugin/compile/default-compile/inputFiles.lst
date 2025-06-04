@@ -1,6 +1,8 @@
+/Users/damiencanovas/Work/Nexagone/formations/Cloudrun-sheet/spring-api-dummy/src/main/java/com/example/dummydata/config/EnvConfig.java
 /Users/damiencanovas/Work/Nexagone/formations/Cloudrun-sheet/spring-api-dummy/src/main/java/com/example/dummydata/DummyDataApplication.java
 /Users/damiencanovas/Work/Nexagone/formations/Cloudrun-sheet/spring-api-dummy/src/main/java/com/example/dummydata/repository/UserRepository.java
 /Users/damiencanovas/Work/Nexagone/formations/Cloudrun-sheet/spring-api-dummy/src/main/java/com/example/dummydata/config/CorsConfig.java
 /Users/damiencanovas/Work/Nexagone/formations/Cloudrun-sheet/spring-api-dummy/src/main/java/com/example/dummydata/model/User.java
+/Users/damiencanovas/Work/Nexagone/formations/Cloudrun-sheet/spring-api-dummy/src/main/java/com/example/dummydata/config/DatabaseConfig.java
 /Users/damiencanovas/Work/Nexagone/formations/Cloudrun-sheet/spring-api-dummy/src/main/java/com/example/dummydata/service/DummyDataService.java
 /Users/damiencanovas/Work/Nexagone/formations/Cloudrun-sheet/spring-api-dummy/src/main/java/com/example/dummydata/controller/DummyDataController.java

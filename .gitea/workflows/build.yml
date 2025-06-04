@@ -1,0 +1,146 @@
+name: Build and Push Docker Image
+run-name: ${{ gitea.actor }} is building a container 🚀
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+  create:
+    tags:
+      - 'v*'
+      - '*'
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Determine tags and metadata
+        id: meta
+        shell: bash
+        run: |
+          # Nettoyer et préparer les variables
+          REGISTRY_CLEAN=$(echo '${{ vars.DOCKER_REGISTRY }}' | tr -d '\n\r' | xargs)
+          REPO_OWNER_LOWER=$(echo "${{ gitea.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO_NAME_LOWER=$(echo "${{ gitea.repository_name }}" | tr '[:upper:]' '[:lower:]')
+
+          # Fallback si le nom du repo est vide
+          if [ -z "${REPO_NAME_LOWER}" ]; then
+            REPO_NAME_LOWER="botsc_ai"
+          fi
+
+          # Base pour tous les tags
+          IMAGE_BASE="${REGISTRY_CLEAN}/${REPO_OWNER_LOWER}/${REPO_NAME_LOWER}"
+
+          # Obtenir le short SHA
+          SHORT_SHA=$(echo "${{ gitea.sha }}" | cut -c1-7)
+
+          # Déterminer les tags selon le type d'événement
+          TAGS=""
+
+          # Tag avec le SHA (toujours présent)
+          TAGS="${TAGS}${IMAGE_BASE}:${{ gitea.sha }}"
+
+          # Vérifier le type d'événement
+          if [[ "${{ gitea.event_name }}" == "create" && "${{ gitea.ref_type }}" == "tag" ]]; then
+            # Événement de création de tag
+            TAG_NAME="${{ gitea.ref_name }}"
+            echo "=== Building for tag: ${TAG_NAME} ==="
+            TAGS="${TAGS},${IMAGE_BASE}:${TAG_NAME}"
+
+            # Si c'est un tag de version (v1.0.0), ajouter aussi 'latest'
+            if [[ "${TAG_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              TAGS="${TAGS},${IMAGE_BASE}:latest"
+              echo "Version tag detected, adding 'latest' tag"
+            fi
+
+          elif [[ "${{ gitea.event_name }}" == "release" ]]; then
+            # Événement de release
+            TAG_NAME="${{ gitea.ref_name }}"
+            echo "=== Building for release: ${TAG_NAME} ==="
+            TAGS="${TAGS},${IMAGE_BASE}:${TAG_NAME}"
+            TAGS="${TAGS},${IMAGE_BASE}:latest"
+
+          elif [[ "${{ gitea.ref_name }}" == "main" ]]; then
+            # Push sur main
+            echo "=== Building for main branch ==="
+            TAGS="${TAGS},${IMAGE_BASE}:main"
+            TAGS="${TAGS},${IMAGE_BASE}:main-${SHORT_SHA}"
+            TAGS="${TAGS},${IMAGE_BASE}:latest"
+
+          elif [[ "${{ gitea.ref_name }}" == "dev" ]]; then
+            # Push sur dev
+            echo "=== Building for dev branch ==="
+            TAGS="${TAGS},${IMAGE_BASE}:dev"
+            TAGS="${TAGS},${IMAGE_BASE}:dev-${SHORT_SHA}"
+
+          else
+            # Autres branches
+            BRANCH_NAME=$(echo "${{ gitea.ref_name }}" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]')
+            echo "=== Building for branch: ${BRANCH_NAME} ==="
+            TAGS="${TAGS},${IMAGE_BASE}:${BRANCH_NAME}"
+            TAGS="${TAGS},${IMAGE_BASE}:${BRANCH_NAME}-${SHORT_SHA}"
+          fi
+
+          # Exporter les variables pour les étapes suivantes
+          echo "DOCKER_TAGS=${TAGS}" >> $GITHUB_ENV
+          echo "IMAGE_BASE=${IMAGE_BASE}" >> $GITHUB_ENV
+
+          echo "=== Build configuration ==="
+          echo "Event: ${{ gitea.event_name }}"
+          echo "Ref Type: ${{ gitea.ref_type }}"
+          echo "Ref Name: ${{ gitea.ref_name }}"
+          echo "SHA: ${{ gitea.sha }}"
+          echo "Short SHA: ${SHORT_SHA}"
+          echo "Tags to build: ${TAGS}"
+
+      - name: Login to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.DOCKER_REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.DOCKER_TAGS }}
+          build-args: |
+            BUILD_DATE=${{ github.run_number }}
+          no-cache: true
+          pull: true
+
+      - name: Build summary
+        shell: bash
+        run: |
+          echo "## 🐳 Docker Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Event:** ${{ gitea.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Ref:** ${{ gitea.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**SHA:** ${{ gitea.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Images pushed:" >> $GITHUB_STEP_SUMMARY
+          IFS=',' read -ra TAG_ARRAY <<< "${DOCKER_TAGS}"
+          for TAG in "${TAG_ARRAY[@]}"; do
+            echo "- \`${TAG}\`" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pull command:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          if [[ "${DOCKER_TAGS}" == *":latest"* ]]; then
+            echo "docker pull ${IMAGE_BASE}:latest" >> $GITHUB_STEP_SUMMARY
+          else
+            FIRST_TAG=$(echo "${DOCKER_TAGS}" | cut -d',' -f1)
+            echo "docker pull ${FIRST_TAG}" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

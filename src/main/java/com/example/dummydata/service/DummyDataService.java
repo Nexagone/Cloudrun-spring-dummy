@@ -35,9 +35,9 @@ public class DummyDataService {
             user.setAge(faker.number().numberBetween(18, 80));
             users.add(user);
         }
-        userRepository.deleteAll();
+        // Sauvegarde les nouvelles données sans supprimer les anciennes
         userRepository.saveAll(users);
-        System.out.println("Données fictives générées à " + java.time.LocalDateTime.now());
+        System.out.println("Nouvelles données fictives ajoutées à " + java.time.LocalDateTime.now());
     }
 
     public List<User> getAllUsers() {
