@@ -11,6 +11,7 @@ Cette API Spring Boot génère et expose des données fictives qui évoluent tou
 ## Endpoints
 
 - `GET /api/users` - Récupère la liste des utilisateurs fictifs
+- `GET /actuator/health` - Endpoint de surveillance pour vérifier l'état de l'application (utilisé par Cloud Run GCP)
 
 ## Configuration
 
